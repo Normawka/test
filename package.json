@@ -23,7 +23,9 @@
         "sass-loader": "^11.0.1"
     },
     "dependencies": {
+        "@fortawesome/fontawesome-free": "^5.15.3",
         "datatables.net": "^1.10.25",
-        "datatables.net-dt": "^1.1.0"
+        "datatables.net-dt": "^1.1.0",
+        "datatables.net-editor": "^2.0.4"
     }
 }

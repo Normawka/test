@@ -3,88 +3,109 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CompanyRequest;
+use App\Mail\MyMail;
 use App\Models\Company;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use \Illuminate\Support\Facades\File;
+use Intervention\Image\Image;
+use Yajra\DataTables\DataTables;
+use Illuminate\Support\Facades\Mail;
+
 
 class CompanyController extends Controller
 {
     /**
      * Display a listing of the resource.
      *
+     * @param Request $request
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response
+     * @throws \Exception
      */
-    public function index()
+    public function index(Request $request)
     {
-        $companies = Company::paginate(10);
-        return view ('company.index',compact('companies'));
-    }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response
-     */
-    public function create()
-    {
-        return view('company.create');
+        if (request()->ajax()) {
+            return DataTables()->of(Company::select('*'))
+                ->addColumn('action', 'company-action')
+                ->addColumn('logo', 'logo')
+                ->editColumn('created_at',function (Company $company){
+                    return $company->created_at->diffforHumans();
+                })
+                ->rawColumns(['action', 'logo'])
+                ->addIndexColumn()
+                ->make(true);
+        }
+        return view('company.index');
+
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function store(CompanyRequest $request)
+    public function store(Request $request)
     {
-        $category = Company::create($request->validate());
-        return redirect()->route('company.index');
-    }
+        request()->validate([
+            'logo' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+        $companyId = $request->id;
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response
-     */
-    public function show(Company $company)
-    {
-        return view('company.show',compact('company'));
+        $details = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'website' => $request->website,
+        ];
+        if ($logo = $request->file('logo')) {
+            File::delete('img/' . $request->hidden_image);
+            $destinationPath = 'img/'; // upload path
+            $profileImage = date('YmdHis') . "." . $logo->getClientOriginalExtension();
+            $logo->move($destinationPath, $profileImage);
+            $details['logo'] = "$profileImage";
+        }
+        if (isset($companyId)){
+        }else{
+            $data=[
+                'name' => $request->get('name'),
+                'email' => $request->get('email'),
+            ];
+            $email = '0967620cc7-22016f@inbox.mailtrap.io';
+            Mail::to($email)->send(new MyMail($data));
+        }
+        $company = Company::updateOrCreate([
+            'id' => $companyId
+        ], $details);
+        return Response()->json($company);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  int  $id
-     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\Http\Response
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function edit(Company $company)
+    public function edit(Request $request)
     {
-        return view('company.create',compact('company'));
-    }
+        $where = array('id' => $request->id);
+        $company = Company::where($where)->first();
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function update(CompanyRequest $request, Company $company)
-    {
-        $company->update($request->validate());
-        return redirect()->route('company.index');
+        return Response()->json($company);
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param  int  $id
+     * @param int $id
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|\Illuminate\Routing\Redirector|string
      */
-    public function destroy(Company $company)
+    public function destroy(Request $request)
     {
-        $company->delete();
-        return redirect()-route('company.index');
+        $data = Company::where('id', $request->id)->first(['logo']);
+        File::delete('img/' . $data->logo);
+        $company = Company::where('id', $request->id)->delete();
+
+        return Response()->json($company);
     }
 }

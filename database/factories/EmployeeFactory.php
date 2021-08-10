@@ -22,7 +22,12 @@ class EmployeeFactory extends Factory
     public function definition()
     {
         return [
-            //
+            'first_name' => $this->faker->firstName,
+            'last_name' => $this->faker->lastName,
+            'company_id'=> $this->faker->numberBetween(1,10),
+            'email' => $this->faker->email,
+            'phone' => $this->faker->tollFreePhoneNumber,
+
         ];
     }
 }

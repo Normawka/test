@@ -30,13 +30,15 @@ class EmployeeRequest extends FormRequest
                 'required',
                 'min:3',
                 'max:255',
-                'unique'
             ],
             'last_name'=>[
                 'required',
                 'min:3',
                 'max:255',
-                'unique'
+            ],
+            'company_id'=>[
+                'min:1',
+                'max:255',
             ],
             'email'=>[
                 'min:3',
@@ -47,10 +49,11 @@ class EmployeeRequest extends FormRequest
 
             ],
 
+
         ];
         if ($this->route()->named('employees.store')){
-            $rules['first_name'].='|unique:employees,first_name';
-            $rules['last_name'].='|unique:employees,last_name';
+            $rules['first_name'].='unique:employees,first_name';
+            $rules['last_name'].='unique:employees,last_name';
         }
         return $rules;
     }
